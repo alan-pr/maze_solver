@@ -8,7 +8,7 @@ class Window:
         self.root_widget = Tk()
         self.root_widget.title("Maze Solver")
         self.root_widget.protocol("WM_DELETE_WINDOW", self.close())
-        self.widget = Canvas(bg="white")
+        self.widget = Canvas(width=width, height=height, bg="white")
         self.widget.pack()
         self.running = False
 
@@ -125,7 +125,10 @@ class Maze:
         self.win = win
         self.seed = random.seed(0) if seed is None else random.seed(seed)
         self._create_cells()
+        self.end = self._cells[num_cols - 1][num_rows - 1]
         self._break_walls_r(int(self.num_cols / 2), int(self.num_rows / 2))
+        self._reset_cells_visited()
+        self.solve()
 
     def _create_cells(self):
         self._cells = []
@@ -192,9 +195,60 @@ class Maze:
             self._draw_cells()
             self._break_walls_r(next_indices[0], next_indices[1])
 
+    def _reset_cells_visited(self):
+        for cells in self._cells:
+            for cell in cells:
+                cell.visited = False
+
+    def solve(self):
+        self.solve_r(0, 0)
+
+    def solve_r(self, i, j):
+        self._animate()
+        current_cell = self._cells[i][j]
+        current_cell.visited = True
+
+        if current_cell == self.end:
+            return True
+        left_cell = None if i - 1 < 0 else self._cells[i - 1][j]
+        top_cell = None if j - 1 < 0 else self._cells[i][j - 1]
+        right_cell = None if i + 1 >= self.num_cols else self._cells[i + 1][j]
+        bottom_cell = None if j + 1 >= self.num_rows else self._cells[i][j + 1]
+
+        if left_cell is not None and not left_cell.has_right_wall and not left_cell.visited:
+            current_cell.draw_move(left_cell)
+            # input(f"Cell[{i - 1}, {j}], Walls[{left_cell.has_left_wall}, {left_cell.has_top_wall}, {left_cell.has_right_wall}, {left_cell.has_bottom_wall}], Visited: {left_cell.visited}")
+            if self.solve_r(i - 1, j):
+                return True
+            current_cell.draw_move(left_cell, undo=True)
+
+        if top_cell is not None and not top_cell.has_bottom_wall and not top_cell.visited:
+            current_cell.draw_move(top_cell)
+#             input(f"Cell[{i}, {j - 1}], Walls[{top_cell.has_left_wall}, {top_cell.has_top_wall}, {top_cell.has_right_wall}, {top_cell.has_bottom_wall}], Visited: {top_cell.visited}")
+            if self.solve_r(i, j - 1):
+                return True
+            current_cell.draw_move(top_cell, undo=True)
+
+        if right_cell is not None and not right_cell.has_left_wall and not right_cell.visited:
+            current_cell.draw_move(right_cell)
+#             input(f"Cell[{i + 1}, {j}], Walls[{right_cell.has_left_wall}, {right_cell.has_top_wall}, {right_cell.has_right_wall}, {right_cell.has_bottom_wall}], Visited: {right_cell.visited}")
+            if self.solve_r(i + 1, j):
+                return True
+            current_cell.draw_move(right_cell, undo=True)
+
+        if bottom_cell is not None and not bottom_cell.has_top_wall and not bottom_cell.visited:
+            current_cell.draw_move(bottom_cell)
+#             input(f"Cell[{i}, {j + 1}], Walls[{bottom_cell.has_left_wall}, {bottom_cell.has_top_wall}, {bottom_cell.has_right_wall}, {bottom_cell.has_bottom_wall}], Visited: {bottom_cell.visited}")
+            if self.solve_r(i, j + 1):
+                return True
+            current_cell.draw_move(bottom_cell, undo=True)
+
+        return False
+
+
 def main():
     win = Window(800, 600)
-    maze = Maze(10, 10, 10, 10, 10, 10, win, random.randrange(10))
+    maze = Maze(10, 10, 10, 10, 20, 20, win, random.randrange(10))
     win.wait_for_close()
 
 
